@@ -34,7 +34,7 @@ D.Bmxa  = inf;              % max section spatial average flux density allowed [
 D.nspc  = 1;                % # of parallel strands
 
 % manufacturing limits
-D.dep   = 0.8*mm;           % epoxy layer for core protection thickness [m]
+D.dep   = 0.8*mm;           % core protection layer thickness [m]
 D.lwrmx = 9.5;              % max. wire length-toroidal winding machine [m]
 D.dsmx  = inf;              % max. strand diameter (inf->no max strand diamater)
 
@@ -59,10 +59,6 @@ D.Trise = 80;               % temperature rise
 D.Twmxa = D.Ta+D.Trise;     % winding temperature limit (K)
 D.Tcrmxa = D.Ta+D.Trise+50; % core temperature limit (K)
 
-% get material properties
-D.mp = CoreMaterialCatalog(1);  % store material properties in parameters struct
-D.cp = conductor_catalog(1);    % conductor properties (copper)
-    
 %% Coil excitation
 % There are two options:
 %  1) Define current waveform by setting a time vector (D.t) in [s] and 
@@ -101,15 +97,57 @@ D.Ic = Idc+Irpp*sawtooth(2*pi*fsw*D.t,1/2);
 % the computational burden. If you do not define D.nf (# of harmonics), it
 % will automatically pick the most important harmonics (greater than 1% of
 % fundamental).
-D.nf = 10;      % force to evaluate 10 harmonics
-
-% current to compute core losses
-D.Icl= Irpp;           % amplitude of ripple current to compute core losses [Apk]
-D.fcl= fsw;        % frequency to compute core losses [Hz]
+D.nf = 10;                  % force to evaluate 10 harmonics
 
 % define current structure
 [D,fn] = DefineCurrent(D,fn);
 
+%% Core Losses
+% This section defines how the core losses will be computed. The core
+% losses calculation in this toolbox is a behaviroual model based on the 
+% Steinmetz Equation framework. The parameters for calculation are defined
+% in the CoreMaterialCatalog. These are the standard kh, alpha, and beta,
+% with the addition of the eddy current losses term ke. Two methods to
+% compute the 'hysteresis' losses are available (MSE and iGSE), and it is
+% selected in D.cl.method. The frequency for core loss calculation is
+% defined in D.cl.fcl in [Hz]. Notice that the flux density for either
+% method needs to be computed for an evaluation waveform. The number of
+% evaluation points is selected in D.cl.ncl. 
+% More specific to how the core losses parameters was fitted, one can 
+% select how the evaluation waveform will be created. Two options are
+% available: 'sine' and 'full'. In the former, the evaluation waveform is a
+% sinusoid, therefore, regardless of the waveform defined in the coil
+% excitation, the core losses is calculated assuming a sine wave of
+% frequency D.cl.fcl and applied current amplitude D.cl.Icl. The second
+% option is 'full', where whatever waveform provided in the coil excitation
+% is processed for core losses calculation. Note that, the provided coil
+% excitation waveform is undesampled to D.cl.ncl points. Finally, a
+% resource to speed up the evaluation is provided through D.cl.symmetry.
+% This parameter allows the evaluation of just a fraction of the evaluation 
+% waveform. For instance, if that is a sine wave, setting it 1/2 would 
+% evaluate the losses just for the positive half of it, and account for the 
+% waveform symmetry in the integral of the losses. The same is true for 
+% 1/4. When symmetry is less than 1, deltaB=Bmax-Bmin is assumed to be 
+% deltaB=2*Bmax. When unsure about it for D.cl.wave different than 'sine', 
+% leave it set to 1. 
+% If you want to neglect core losses, just set the frequency D.cl.fcl to 0.
+D.cl.method   = 'MSE';      % core losses methods: 'MSE' or 'iGSE'
+D.cl.fcl      = fsw;        % frequency to compute core losses [Hz]
+D.cl.ncl      = 20;         % # of evaluation points for core losses
+D.cl.wave     = 'sine';     % 'sine': sinusoidal approximation
+                            % 'full': process full waveform
+D.cl.symmetry = 1/4;        % process just a fraction of the period due to 
+                            % symmetry: e.g. 1/2->positive half of sine,
+                            % 1/4->positive quarter of sine
+% if the D.cl.wave selected is 'sine' approximation, define amplitude of 
+% the sinusoidal waveform
+D.cl.Icl      = Irpp;       % amplitude of ripple current to compute core losses [Apk]
+
+%%
+% get material properties
+D.mp = CoreMaterialCatalog(1,D.cl.fcl);  % store material properties in parameters struct
+D.cp = conductor_catalog(1);    % conductor properties (copper)
+    
 %%
 % simulation parameters
 D.ns    = 10;               % # of sections (concentric toroidal rings)

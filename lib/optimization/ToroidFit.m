@@ -300,22 +300,9 @@ if (CS<CI)&&(~ev)                   % if any constraint was not satisfied
    return;                          % to the number of satisfied constraints
 end
 
+%% 
 % compute core losses
-if D.fcl~=0 % AC
-    % define AC operating condition
-    qe = linspace(0,pi/2,D.ncl);% angles - quarter electrical cycle [rad]
-    t = qe/D.wcl;               % time vector - quarter electrical cycle [s]
-    I = D.Icl*sin(D.wcl*t);     % generate quarter cycle of current [A]
-    B = SolveB(P,I,P.rsec);     % solve for flux density [T] (row->space, col->time)
-    Bsec = (B(1:end-1,:)+B(2:end,:))/2;
-    % core loss density in each branch [W/m^3]
-    pld = ComputeMSE(qe,Bsec,D.wcl,P.mp);% spatial average of B for each section [T]
-    P.Plcsec = P.Vsec.*pld;     % core losses for each section [W]
-    P.Plc = sum(P.Plcsec);      % core losses [W]
-else        % DC
-    P.Plcsec = zeros(size(P.Vsec));
-    P.Plc = 0;
-end
+P = ComputeCoreLosses(P,D);
 
 %% Heat Transfer Analysis
 % Thermal Equivalent Circuit (TEC)
@@ -336,7 +323,7 @@ CI = length(c);                     % constraints imposed
 if (CS<CI)&&(~ev)                   % if any constraint was not satisfied
    f=eps*ones(D.nobj,1)*(CS-NC)/NC; % return a negative fitness proportional
    return;                          % to the number of satisfied constraints
-end
+end % end of constraints test
 
 %%
 % compute fitness
@@ -614,7 +601,7 @@ if (nargin>2)
 end % end if (nargin>2)
     
 end
-
+%%
 function h = PlotConductors(T,W,D)
 hold on;                    % use current figure
 %%
@@ -685,7 +672,7 @@ for kc = 1:W.N*D.nspc              % loop though all conductors
 end
 hold off;                   % release figure
 end
-
+%%
 function h = PlotCircle(xc,yc,ri,ro,color,np)
 hold on;                        % use current figure
 if nargin<6
@@ -697,7 +684,7 @@ y = [ro*sin(q),ri*sin(q)]+yc;   % y coordinates [m]
 h = fill(x,y,color,'EdgeColor','none');% plot conductor
 hold off;                       % release figure
 end
-
+%%
 function fn = PlotCrossSection(fn,P,D,Bpk)
 
 % define local constants
@@ -801,6 +788,7 @@ camlight(0,0,'infinite');
 camlight(0,0,'infinite');
 end
 
+%%
 function fn = PlotTemperature(fn,P,D,T)
 
 % define local variables
@@ -929,6 +917,7 @@ legend({'Winding','Epoxy Layer','Core'},'interpreter','latex',...
 
 end
 
+%%
 function [] = RegionTemperature(r,zcalc,zplot,Tcf)
 % compute temperature profile in the region
 [rr,zc] = meshgrid(r,zcalc);
@@ -939,6 +928,7 @@ Treg = (Tcf.c2r*rr.^2+Tcf.clr*log(rr)+Tcf.c2z*zc.^2+Tcf.c1z*zc+...
 surf(rr,zp,Treg-273.15,'EdgeColor','None');
 end
 
+%%
 function [] = RegionTemperatureCorner(rcalc,zcalc,rplot,qplot,xc,yc,Tcf)
 % compute temperature profile in the region
 [rc,zc] = meshgrid(rcalc,zcalc);
@@ -949,6 +939,7 @@ Treg = transpose(Tcf.c2r*rc.^2+Tcf.clr*log(rc)+Tcf.c2z*zc.^2+Tcf.c1z*zc+...
 surf(rp.*cos(qp)+xc,rp.*sin(qp)+yc,Treg-273.15,'EdgeColor','None');
 end
 
+%%
 function [] = RegionTemperatureMirror(r,zcalc,zplot,Tcf)
 % compute temperature profile in the region
 [rr,zc] = meshgrid(r,zcalc);
@@ -957,4 +948,37 @@ Treg = (Tcf.c2r*rr.^2+Tcf.clr*log(rr)+Tcf.c2z*zc.^2+Tcf.c1z*zc+...
 % plot temperature profile in the region
 [rr,zp] = meshgrid(r,zplot);
 surf(rr,zp,flipud(Treg)-273.15,'EdgeColor','None');
+end % end of RegionTemperatureMirror
+
+%%
+function [] = CheckDesignSpecsD(D)
+
+if ~isfield(D,'Lrqi')
+    error('Please, define D.Lrqi: minimum required incremental inductance [H].');
+elseif ~isfield(D,'kpfmx')
+    error('Please, define D.kpfmx: maximum allowed packing factor.');
+elseif ~isfield(D,'kb')
+    error('Please, define D.kb: winding build factor, determines distance between two consecutive conductors.');
+elseif ~isfield(D,'amxa')
+    error('Please, define D.amxa: maximum aspect ratio.');
+elseif ~isfield(D,'MLmxa')
+    error('Please, define D.MLmxa: maximum allowed mass [kg].');
+elseif ~isfield(D,'PLmxa')
+    error('Please, define D.MLmxa: maximum allowed power dissipation [W].');   
+elseif ~isfield(D,'Bmxa')
+    error('Please, define D.Bmxa: maximum allowed flux density [T].');
+elseif ~isfield(D,'nspc')
+    error('Please, define D.nspc: # of parallel strands per conductor.');  
+elseif ~isfield(D,'dep')
+    error('Please, define D.dep: core protection layer thickness [m].');  
+elseif ~isfield(D,'lwrmx')
+    error('Please, define D.lwrmx: maximum allowed wire length [m].');  
+elseif ~isfield(D,'dsmx')
+    error('Please, define D.dsmx: maximum allowed strand diameter [m].');  
+elseif ~isfield(D,'ep')
+    if ~isfield(D.ep,'rho')
+        error('Please, define D.ep.rho: protection layer mass density [kg/m^3].'); 
+    end
 end
+
+end % end of CheckDesignSpecs()
