@@ -11,13 +11,6 @@ function [varargout] = DefineCurrent(D,fn)
 %%
 % input pre-processing
 
-% check if core losses frequency information has been provided
-if ~isfield(D,'fcl')% check if core losses has been defined
-    error('Please, define the core losses frequency fcl in the structure D.');
-elseif ~isfield(D,'Icl')% check if excitation current has been defined
-    error('Please, define the core losses current Icl in the structure D.');
-end
-
 % check if basic current description has been provided 
 if (~isfield(D,'Ic'))||(~isfield(D,'t'))% check if excitation current has been defined
     flag = false;
@@ -84,6 +77,7 @@ if flag  % current waveform in time has been provided
     D.fcf = fsp(idxs(1:round(D.nf)));   % freq. of largest harmonic currents [Hz]
     D.phf = ph1(idxs(1:round(D.nf)));   % phases of largest harmonic currents [rad]
 else    % frequencies, phases and harmonic currents have been provided
+    D.nf = length(D.Icf);% # of harmonic frequencies to evaluate
     % ensure column vectors
     D.Icf = D.Icf(:);   % current amplitude of each harmonic 
     D.fcf = D.fcf(:);   % frequency of each harmonic
@@ -100,7 +94,6 @@ else    % frequencies, phases and harmonic currents have been provided
     end
 end
 
-
 %%
 % compute harmonic current RMS value and radian frequencies
 D.wn = 2*pi*D.fcf;                  % harmonic radian frequencies [rad/s]
@@ -108,13 +101,22 @@ D.irmsn = D.Icf;                    % get rms value of each harmonic current [A]
 D.irmsn(D.fcf~=0) = D.irmsn(D.fcf~=0)/sqrt(2);
 
 % compute time domain fitted current
-ifit = sum(D.Icf.*cos(D.wn*D.t'+D.phf),1);% fitted current waveform [A]
-D.Ipk = max(ifit);                      % peak current [A]
+mem = memory;
+if numel(D.t)*D.nf>(mem.MaxPossibleArrayBytes/8)/2
+    % compute fdfit by accumulation to save memory
+    ifit = D.Icf(1)*cos(D.wn(1)*D.t+D.phf(1));
+    for k = 2:nf
+        ifit = ifit+D.Icf(k)*cos(D.wnf(k)*D.t+D.phf(k));
+    end
+else
+    ifit = sum(D.Icf.*cos(D.wn*transpose(D.t)+D.phf),1); % fitted waveform
+end
 
-%%
-% core losses parameters
-D.wcl = 2*pi*D.fcl;             % radian frequency for core losses [rad/s]
-D.ncl = 20;                     % # of evaluation points for core losses
+% if D.Ic was not provided, assign ifit to D.Ic
+if ~isfield(D,'Ic'), D.Ic = ifit; end
+
+% determine peak current
+D.Ipk = max(D.Ic);                      % peak current [A]
 
 %%
 % assign output
