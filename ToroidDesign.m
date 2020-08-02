@@ -128,7 +128,7 @@ D.cl.Icl      = 15;       % amplitude of ripple current to compute core losses [
 
 %%
 % get material properties
-D.mp = CoreMaterialCatalog(1,D.fcl);% store material properties in parameters struct
+D.mp = CoreMaterialCatalog(1,D.cl.fcl);% store material properties in parameters struct
 D.cp = conductor_catalog(1);        % conductor properties (copper)
 
 %%

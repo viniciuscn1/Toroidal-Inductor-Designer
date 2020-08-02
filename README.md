@@ -1,6 +1,6 @@
 # Toroidal-Inductor-Designer
  This Matlab toolbox allows the evaluation and design of toroidal inductors.
-
+* it requires Matlab's Optimization Toolbox
 *********************************************************************************************************
 Toroidal Inductor Design Optimization Toolbox
 *********************************************************************************************************
