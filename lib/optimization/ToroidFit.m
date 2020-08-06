@@ -379,11 +379,11 @@ if (nargin>2)
         fprintf('Total volume: %.3f [L]\n',P.VL*1e3);
         fprintf('Total loss vs allowed: %.3f / %.3f [W]\n',P.Pt,D.PLmxa);
         fprintf('Magnetizing Incremental Inductance : %.3f [mH]\n',...
-            P.Linc*1e3);
+            P.Lm*1e3);
         fprintf('Leakage Inductance : %.3f [mH]\n',...
             P.Llk*1e3);
         fprintf('Total Incremental Inductance vs required: %.3f / %.3f [mH]\n',...
-            (P.Linc+P.Llk)*1e3,D.Lrqi*1e3);
+            P.Linc*1e3,D.Lrqi*1e3);
         fprintf('Resistance at Ambient Temperature: %.3f [mOhm]\n',P.Rs*1e3);
         fprintf('Resistance at Operating Temperature: %.3f [mOhm]\n',Rdc*1e3);
         %%
